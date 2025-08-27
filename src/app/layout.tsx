@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   description: "An online text highlighter application built with Next.js, TypeScript, Tailwind CSS, and shadcn/ui for easy text annotation and sharing.",
   keywords: ["text highlighter", "annotate text", "online highlighter", "web highlighter", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui"],
   authors: [{ name: "devasudan" }],
+  icons: {
+    icon: "/favicon.png",
+  },
   openGraph: {
     title: "Text Highlighter",
     description: "Highlight and annotate text online",
