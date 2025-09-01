@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Copy, Download, FileText, Highlighter } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface HighlightMatch {
+  type: 'bible' | 'page' | 'reference';
+  start: number;
+  end: number;
+  value: string;
+}
 
 const TextHighlighter = () => {
   // State to hold the user's input text.
@@ -101,21 +109,24 @@ const TextHighlighter = () => {
   const englishRefRegex = /\[[A-Z]\d+\]/g;
   const englishWordRegex = /\b[a-zA-Z]+\b/g;
 
+  const { toast } = useToast();
+  const [hoveredParagraph, setHoveredParagraph] = useState<number | null>(null);
+
   // Handles text input changes and triggers the highlighting process.
   const handleTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = event.target.value;
     setTextInput(text);
-    
+
     // Count the number of paragraphs.
     const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim() !== '');
     setParagraphCount(paragraphs.length);
-    
+
     // Count highlights
     const bibleMatches = text.match(bibleRegex) || [];
     const pageMatches = text.match(pageRegex) || [];
     const referenceMatches = text.match(englishRefRegex) || [];
     const englishMatches = text.match(englishWordRegex) || [];
-    
+
     setHighlightCounts({
       bible: bibleMatches.length,
       page: pageMatches.length,
@@ -124,124 +135,180 @@ const TextHighlighter = () => {
     });
   };
 
+  const handleCopyParagraph = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Paragraph copied to clipboard!",
+      });
+    } catch (err) {
+      console.error("Failed to copy paragraph: ", err);
+      toast({
+        title: "Failed to copy paragraph.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
   // Renders the highlighted text by splitting the input based on regex matches.
   const renderHighlightedText = () => {
     if (!textInput) return null;
-    
-    // An array to store all matches with their type, index, and value.
-    const matches = [];
-    
-    // Find all matches for each category and store them.
-    const findMatches = (regex: RegExp, type: string) => {
-      let match;
-      while ((match = regex.exec(textInput)) !== null) {
-        matches.push({
-          type: type,
-          start: match.index,
-          end: match.index + match[0].length,
-          value: match[0],
-        });
+
+    const paragraphs = textInput.split(/\n\s*\n/).filter(p => p.trim() !== '');
+    const processedParagraphs: (string | React.ReactNode)[] = [];
+
+    paragraphs.forEach((paragraph) => {
+      const pageNumberMatch = paragraph.match(pageRegex);
+      if (pageNumberMatch) {
+        const pageNumberIndex = paragraph.indexOf(pageNumberMatch[0]);
+        const beforePageNumber = paragraph.substring(0, pageNumberIndex).trim();
+        const afterPageNumber = paragraph.substring(pageNumberIndex + pageNumberMatch[0].length).trim();
+
+        if (beforePageNumber) {
+          processedParagraphs.push(beforePageNumber);
+        }
+        processedParagraphs.push(pageNumberMatch[0]); // Keep the page number as its own "paragraph" for highlighting
+        if (afterPageNumber) {
+          processedParagraphs.push(afterPageNumber);
+        }
+      } else {
+        processedParagraphs.push(paragraph);
       }
-    };
-    
-    // Call the findMatches function for each regex.
-    findMatches(bibleRegex, 'bible');
-    findMatches(pageRegex, 'page');
-    findMatches(englishRefRegex, 'reference');
-    
-    // Sort the matches by their starting index to process them in order.
-    matches.sort((a, b) => a.start - b.start);
-    
-    const elements = [];
-    let lastIndex = 0;
-    
-    // Iterate through the sorted matches to build the output JSX.
-    matches.forEach((match, index) => {
-      // Add the text before the current match.
-      if (match.start > lastIndex) {
-        // Highlight English words in the non-matched segments.
-        const nonMatchedText = textInput.substring(lastIndex, match.start);
-        let nonMatchedIndex = 0;
+    });
+
+    return processedParagraphs.map((paraContent, index) => {
+      const paragraphText = typeof paraContent === 'string' ? paraContent : ''; // Ensure it's a string for copying
+
+      // An array to store all matches with their type, index, and value.
+      const matches: HighlightMatch[] = [];
+
+      // Find all matches for each category and store them.
+      const findMatches = (regex: RegExp, type: HighlightMatch['type']) => {
+        let match;
+        while ((match = regex.exec(paragraphText)) !== null) {
+          matches.push({
+            type: type,
+            start: match.index,
+            end: match.index + match[0].length,
+            value: match[0],
+          });
+        }
+      };
+
+      // Call the findMatches function for each regex.
+      findMatches(bibleRegex, 'bible');
+      findMatches(pageRegex, 'page');
+      findMatches(englishRefRegex, 'reference');
+
+      // Sort the matches by their starting index to process them in order.
+      matches.sort((a, b) => a.start - b.start);
+
+      const elements: React.ReactNode[] = [];
+      let lastIndex = 0;
+
+      // Iterate through the sorted matches to build the output JSX.
+      matches.forEach((match, matchIndex) => {
+        // Add the text before the current match.
+        if (match.start > lastIndex) {
+          // Highlight English words in the non-matched segments.
+          const nonMatchedText = paragraphText.substring(lastIndex, match.start);
+          let nonMatchedIndex = 0;
+          let englishWordMatch;
+          while ((englishWordMatch = englishWordRegex.exec(nonMatchedText)) !== null) {
+            const beforeWord = nonMatchedText.substring(nonMatchedIndex, englishWordMatch.index);
+            if (beforeWord) {
+              elements.push(
+                <span key={`text-${index}-${matchIndex}-${nonMatchedIndex}`}>
+                  {beforeWord}
+                </span>
+              );
+            }
+            elements.push(
+              <span key={`english-${index}-${matchIndex}-${englishWordMatch.index}`} className="inline-block rounded-md px-1 py-0.5 font-semibold bg-red-200 text-red-900 dark:bg-red-800 dark:text-red-100">
+                {englishWordMatch[0]}
+              </span>
+            );
+            nonMatchedIndex = englishWordMatch.index + englishWordMatch[0].length;
+          }
+          const remainingText = nonMatchedText.substring(nonMatchedIndex);
+          if (remainingText) {
+            elements.push(
+              <span key={`text-${index}-${matchIndex}-${nonMatchedIndex}-rem`}>
+                {remainingText}
+              </span>
+            );
+          }
+        }
+
+        // Create a span element with the appropriate highlight class for the current match.
+        const highlightClass = {
+          bible: 'bg-yellow-200 text-yellow-900 dark:bg-yellow-800 dark:text-yellow-100',
+          page: 'bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100',
+          reference: 'bg-green-200 text-green-900 dark:bg-green-800 dark:text-green-100',
+        }[match.type];
+
+        elements.push(
+          <span key={`match-${index}-${matchIndex}`} className={`inline-block rounded-md px-1 py-0.5 font-semibold ${highlightClass}`}>
+            {match.value}
+          </span>
+        );
+
+        // Update the last processed index.
+        lastIndex = match.end;
+      });
+
+      // Add any remaining text after the last match, and highlight English words within it.
+      if (lastIndex < paragraphText.length) {
+        const remainingText = paragraphText.substring(lastIndex);
+        let remainingIndex = 0;
         let englishWordMatch;
-        while ((englishWordMatch = englishWordRegex.exec(nonMatchedText)) !== null) {
-          const beforeWord = nonMatchedText.substring(nonMatchedIndex, englishWordMatch.index);
+        while ((englishWordMatch = englishWordRegex.exec(remainingText)) !== null) {
+          const beforeWord = remainingText.substring(remainingIndex, englishWordMatch.index);
           if (beforeWord) {
             elements.push(
-              <span key={`text-${lastIndex}-${nonMatchedIndex}`}>
+              <span key={`text-final-${index}-${remainingIndex}`}>
                 {beforeWord}
               </span>
             );
           }
           elements.push(
-            <span key={`english-${lastIndex + englishWordMatch.index}`} className="inline-block rounded-md px-1 py-0.5 font-semibold bg-red-200 text-red-900 dark:bg-red-800 dark:text-red-100">
+            <span key={`english-final-${index}-${englishWordMatch.index}`} className="inline-block rounded-md px-1 py-0.5 font-semibold bg-red-200 text-red-900 dark:bg-red-800 dark:text-red-100">
               {englishWordMatch[0]}
             </span>
           );
-          nonMatchedIndex = englishWordMatch.index + englishWordMatch[0].length;
+          remainingIndex = englishWordMatch.index + englishWordMatch[0].length;
         }
-        const remainingText = nonMatchedText.substring(nonMatchedIndex);
-        if (remainingText) {
+        const finalText = remainingText.substring(remainingIndex);
+        if (finalText) {
           elements.push(
-            <span key={`text-${lastIndex}-${nonMatchedIndex}`}>
-              {remainingText}
+            <span key={`text-final-${index}-${remainingIndex}-rem`}>
+              {finalText}
             </span>
           );
         }
       }
-      
-      // Create a span element with the appropriate highlight class for the current match.
-      const highlightClass = {
-        bible: 'bg-yellow-200 text-yellow-900 dark:bg-yellow-800 dark:text-yellow-100',
-        page: 'bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100',
-        reference: 'bg-green-200 text-green-900 dark:bg-green-800 dark:text-green-100',
-      }[match.type];
-      
-      elements.push(
-        <span key={`match-${index}`} className={`inline-block rounded-md px-1 py-0.5 font-semibold ${highlightClass}`}>
-          {match.value}
-        </span>
+
+      return (
+        <p
+          key={`paragraph-${index}`}
+          className={`mb-2 p-2 rounded-md cursor-pointer transition-colors duration-200 ${
+            hoveredParagraph === index ? 'bg-gray-100 dark:bg-gray-700' : ''
+          }`}
+          onMouseEnter={() => setHoveredParagraph(index)}
+          onMouseLeave={() => setHoveredParagraph(null)}
+          onClick={() => handleCopyParagraph(paragraphText)}
+        >
+          {elements}
+        </p>
       );
-      
-      // Update the last processed index.
-      lastIndex = match.end;
     });
-    
-    // Add any remaining text after the last match, and highlight English words within it.
-    if (lastIndex < textInput.length) {
-      const remainingText = textInput.substring(lastIndex);
-      let remainingIndex = 0;
-      let englishWordMatch;
-      while ((englishWordMatch = englishWordRegex.exec(remainingText)) !== null) {
-        const beforeWord = remainingText.substring(remainingIndex, englishWordMatch.index);
-        if (beforeWord) {
-          elements.push(
-            <span key={`text-${lastIndex}-${remainingIndex}`}>
-              {beforeWord}
-            </span>
-          );
-        }
-        elements.push(
-          <span key={`english-${lastIndex + englishWordMatch.index}`} className="inline-block rounded-md px-1 py-0.5 font-semibold bg-red-200 text-red-900 dark:bg-red-800 dark:text-red-100">
-            {englishWordMatch[0]}
-          </span>
-        );
-        remainingIndex = englishWordMatch.index + englishWordMatch[0].length;
-      }
-      const finalText = remainingText.substring(remainingIndex);
-      if (finalText) {
-        elements.push(
-          <span key={`text-${lastIndex}-${remainingIndex}`}>
-            {finalText}
-          </span>
-        );
-      }
-    }
-    
-    return elements;
   };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(textInput);
+    toast({
+      title: "All text copied to clipboard!",
+    });
   };
 
   const downloadText = () => {
