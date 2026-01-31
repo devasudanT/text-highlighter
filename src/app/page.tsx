@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Copy, Download, FileText, Highlighter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import ScrollProgressBar from '@/components/scroll-progress-bar';
 
 interface HighlightMatch {
   type: 'bible' | 'page' | 'reference';
@@ -103,7 +104,7 @@ const TextHighlighter = () => {
   // Creates a regular expression pattern for Bible verse references.
   const bibleRegexPattern = `(?:${bibleBooksTamil.join('|')})\\s+\\d+:\\d+`;
   const bibleRegex = new RegExp(bibleRegexPattern, 'g');
-  
+
   // Regular expressions for other text categories.
   const pageRegex = /PAGE\s+\d+/g;
   const englishRefRegex = /\[[A-Z]\d+\]/g;
@@ -291,9 +292,8 @@ const TextHighlighter = () => {
       return (
         <p
           key={`paragraph-${index}`}
-          className={`mb-2 p-2 rounded-md cursor-pointer transition-colors duration-200 ${
-            hoveredParagraph === index ? 'bg-gray-100 dark:bg-gray-700' : ''
-          }`}
+          className={`mb-2 p-2 rounded-md cursor-pointer transition-colors duration-200 ${hoveredParagraph === index ? 'bg-gray-100 dark:bg-gray-700' : ''
+            }`}
           onMouseEnter={() => setHoveredParagraph(index)}
           onMouseLeave={() => setHoveredParagraph(null)}
           onClick={() => handleCopyParagraph(paragraphText)}
@@ -328,192 +328,195 @@ const TextHighlighter = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-3">
-            <Highlighter className="h-8 w-8 text-primary" />
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">
-              Text Highlighter
-            </h1>
+    <>
+      <ScrollProgressBar containerId="output-scroll-area" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-6xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-3">
+              <Highlighter className="h-8 w-8 text-primary" />
+              <h1 className="text-4xl font-bold tracking-tight text-foreground">
+                Text Highlighter
+              </h1>
+            </div>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Advanced text analysis tool that highlights Bible verses, page numbers, references, and English words with intelligent categorization
+            </p>
           </div>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Advanced text analysis tool that highlights Bible verses, page numbers, references, and English words with intelligent categorization
-          </p>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-4 text-center">
-              <FileText className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{paragraphCount}</div>
-              <div className="text-xs text-muted-foreground">Paragraphs</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-4 text-center">
-              <div className="w-6 h-6 mx-auto mb-2 rounded bg-yellow-200 dark:bg-yellow-800" />
-              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{highlightCounts.bible}</div>
-              <div className="text-xs text-muted-foreground">Bible Verses</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-4 text-center">
-              <div className="w-6 h-6 mx-auto mb-2 rounded bg-blue-200 dark:bg-blue-800" />
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{highlightCounts.page}</div>
-              <div className="text-xs text-muted-foreground">Page Numbers</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-4 text-center">
-              <div className="w-6 h-6 mx-auto mb-2 rounded bg-green-200 dark:bg-green-800" />
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{highlightCounts.reference}</div>
-              <div className="text-xs text-muted-foreground">References</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
-            <CardContent className="p-4 text-center">
-              <div className="w-6 h-6 mx-auto mb-2 rounded bg-red-200 dark:bg-red-800" />
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400">{highlightCounts.english}</div>
-              <div className="text-xs text-muted-foreground">English Words</div>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
+              <CardContent className="p-4 text-center">
+                <FileText className="h-6 w-6 mx-auto mb-2 text-blue-600" />
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{paragraphCount}</div>
+                <div className="text-xs text-muted-foreground">Paragraphs</div>
+              </CardContent>
+            </Card>
 
-        {/* Main Content */}
-        <div className="grid gap-6">
-          {/* Input Section */}
+            <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
+              <CardContent className="p-4 text-center">
+                <div className="w-6 h-6 mx-auto mb-2 rounded bg-yellow-200 dark:bg-yellow-800" />
+                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{highlightCounts.bible}</div>
+                <div className="text-xs text-muted-foreground">Bible Verses</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
+              <CardContent className="p-4 text-center">
+                <div className="w-6 h-6 mx-auto mb-2 rounded bg-blue-200 dark:bg-blue-800" />
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{highlightCounts.page}</div>
+                <div className="text-xs text-muted-foreground">Page Numbers</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
+              <CardContent className="p-4 text-center">
+                <div className="w-6 h-6 mx-auto mb-2 rounded bg-green-200 dark:bg-green-800" />
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{highlightCounts.reference}</div>
+                <div className="text-xs text-muted-foreground">References</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-border/50">
+              <CardContent className="p-4 text-center">
+                <div className="w-6 h-6 mx-auto mb-2 rounded bg-red-200 dark:bg-red-800" />
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{highlightCounts.english}</div>
+                <div className="text-xs text-muted-foreground">English Words</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Content */}
+          <div className="grid gap-6">
+            {/* Input Section */}
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>Input Text</span>
+                  <Badge variant="secondary" className="ml-auto">
+                    {textInput.length} chars
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  Paste your text below to analyze and highlight different elements
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ScrollArea className="h-[162px] w-full rounded-md border border-border/50">
+                  <Textarea
+                    value={textInput}
+                    onChange={handleTextChange}
+                    placeholder="உங்கள் உரையை இங்கே ஒட்டவும்... இந்த கருவி தானாகவே வேத வசனங்கள், பக்க எண்கள், குறிப்புகள் மற்றும் ஆங்கில சொற்களை முன்னிலைப்படுத்தும்."
+                    className="min-h-[142px] resize-none border-none focus:border-none focus:ring-0 font-tiro-tamil bg-transparent"
+                  />
+                </ScrollArea>
+
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    onClick={copyToClipboard}
+                    disabled={!textInput}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </Button>
+                  <Button
+                    onClick={downloadText}
+                    disabled={!textInput}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Button>
+                  <Button
+                    onClick={clearText}
+                    disabled={!textInput}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Output Section */}
+            <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-border/50">
+              <CardHeader>
+                <CardTitle>Highlighted Output</CardTitle>
+                <CardDescription>
+                  Text with automatic highlighting applied
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea id="output-scroll-area" className="h-[600px] w-full rounded-md border border-border/50 p-4 bg-background/50">
+                  <div className="whitespace-pre-wrap leading-relaxed font-tiro-tamil text-foreground">
+                    {textInput ? renderHighlightedText() : (
+                      <div className="text-center text-muted-foreground py-12">
+                        <Highlighter className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p className="font-tiro-tamil">முன்னிலைப்படுத்தப்பட்ட முடிவுகளைப் பார்க்க உரையை உள்ளிடவும்</p>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Legend */}
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-border/50">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span>Input Text</span>
-                <Badge variant="secondary" className="ml-auto">
-                  {textInput.length} chars
-                </Badge>
-              </CardTitle>
+              <CardTitle>Highlight Legend</CardTitle>
               <CardDescription>
-                Paste your text below to analyze and highlight different elements
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ScrollArea className="h-[162px] w-full rounded-md border border-border/50">
-                <Textarea
-                  value={textInput}
-                  onChange={handleTextChange}
-                  placeholder="உங்கள் உரையை இங்கே ஒட்டவும்... இந்த கருவி தானாகவே வேத வசனங்கள், பக்க எண்கள், குறிப்புகள் மற்றும் ஆங்கில சொற்களை முன்னிலைப்படுத்தும்."
-                  className="min-h-[142px] resize-none border-none focus:border-none focus:ring-0 font-tiro-tamil bg-transparent"
-                />
-              </ScrollArea>
-              
-              <div className="flex gap-2 flex-wrap">
-                <Button 
-                  onClick={copyToClipboard} 
-                  disabled={!textInput}
-                  variant="outline" 
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy
-                </Button>
-                <Button 
-                  onClick={downloadText} 
-                  disabled={!textInput}
-                  variant="outline" 
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
-                <Button 
-                  onClick={clearText} 
-                  disabled={!textInput}
-                  variant="outline" 
-                  size="sm"
-                  className="gap-2"
-                >
-                  Clear
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Output Section */}
-          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-border/50">
-            <CardHeader>
-              <CardTitle>Highlighted Output</CardTitle>
-              <CardDescription>
-                Text with automatic highlighting applied
+                Color coding for different types of text elements
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px] w-full rounded-md border border-border/50 p-4 bg-background/50">
-                <div className="whitespace-pre-wrap leading-relaxed font-tiro-tamil text-foreground">
-                  {textInput ? renderHighlightedText() : (
-                    <div className="text-center text-muted-foreground py-12">
-                      <Highlighter className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p className="font-tiro-tamil">முன்னிலைப்படுத்தப்பட்ட முடிவுகளைப் பார்க்க உரையை உள்ளிடவும்</p>
-                    </div>
-                  )}
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/20">
+                  <div className="w-4 h-4 rounded bg-yellow-300 dark:bg-yellow-700"></div>
+                  <div>
+                    <div className="font-medium text-yellow-900 dark:text-yellow-100">Bible Verses</div>
+                    <div className="text-sm text-yellow-700 dark:text-yellow-300">Tamil Bible references</div>
+                  </div>
                 </div>
-              </ScrollArea>
+
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-100 dark:bg-blue-900/20">
+                  <div className="w-4 h-4 rounded bg-blue-300 dark:bg-blue-700"></div>
+                  <div>
+                    <div className="font-medium text-blue-900 dark:text-blue-100">Page Numbers</div>
+                    <div className="text-sm text-blue-700 dark:text-blue-300">PAGE + number format</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-green-100 dark:bg-green-900/20">
+                  <div className="w-4 h-4 rounded bg-green-300 dark:bg-green-700"></div>
+                  <div>
+                    <div className="font-medium text-green-900 dark:text-green-100">References</div>
+                    <div className="text-sm text-green-700 dark:text-green-300">[Letter+Number] format</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-red-100 dark:bg-red-900/20">
+                  <div className="w-4 h-4 rounded bg-red-300 dark:bg-red-700"></div>
+                  <div>
+                    <div className="font-medium text-red-900 dark:text-red-100">English Words</div>
+                    <div className="text-sm text-red-700 dark:text-red-300">Latin alphabet words</div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* Legend */}
-        <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-border/50">
-          <CardHeader>
-            <CardTitle>Highlight Legend</CardTitle>
-            <CardDescription>
-              Color coding for different types of text elements
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/20">
-                <div className="w-4 h-4 rounded bg-yellow-300 dark:bg-yellow-700"></div>
-                <div>
-                  <div className="font-medium text-yellow-900 dark:text-yellow-100">Bible Verses</div>
-                  <div className="text-sm text-yellow-700 dark:text-yellow-300">Tamil Bible references</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                <div className="w-4 h-4 rounded bg-blue-300 dark:bg-blue-700"></div>
-                <div>
-                  <div className="font-medium text-blue-900 dark:text-blue-100">Page Numbers</div>
-                  <div className="text-sm text-blue-700 dark:text-blue-300">PAGE + number format</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-100 dark:bg-green-900/20">
-                <div className="w-4 h-4 rounded bg-green-300 dark:bg-green-700"></div>
-                <div>
-                  <div className="font-medium text-green-900 dark:text-green-100">References</div>
-                  <div className="text-sm text-green-700 dark:text-green-300">[Letter+Number] format</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-red-100 dark:bg-red-900/20">
-                <div className="w-4 h-4 rounded bg-red-300 dark:bg-red-700"></div>
-                <div>
-                  <div className="font-medium text-red-900 dark:text-red-100">English Words</div>
-                  <div className="text-sm text-red-700 dark:text-red-300">Latin alphabet words</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </>
   );
 };
 
